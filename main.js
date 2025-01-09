@@ -41,4 +41,3 @@ function animate() {
     renderer.render(scene, camera);
 }
 animate();
-console.log('main.js is loaded');
