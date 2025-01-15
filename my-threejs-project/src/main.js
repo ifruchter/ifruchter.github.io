@@ -35,6 +35,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
     directionalLight.position.set(10, 10, 10);
     scene.add(directionalLight);
+
+    // Create the ocean surface
+    const oceanGeometry = new THREE.PlaneGeometry(1000, 1000, 50, 50); // Large plane with segments for waves
+    const oceanMaterial = new THREE.MeshPhongMaterial({
+      color: 0x1e90ff, // Deep sky blue
+      shininess: 50, // Adds a slight shine
+      flatShading: true, // Low-poly look
+    });
+    const ocean = new THREE.Mesh(oceanGeometry, oceanMaterial);
+    ocean.rotation.x = -Math.PI / 2; // Rotate to lie flat
+    scene.add(ocean);
+
+    // Add wave animation
+    function animateWaves() {
+      const time = performance.now() * 0.001; // Get time in seconds
+      const vertices = ocean.geometry.attributes.position.array;
+
+      for (let i = 0; i < vertices.length; i += 3) {
+        const x = vertices[i];
+        const y = vertices[i + 1];
+        const z = vertices[i + 2];
+
+        // Simple sine wave formula for height
+        vertices[i + 2] = Math.sin(x * 0.1 + time) * 0.5 + Math.sin(y * 0.1 + time) * 0.5;
+      }
+
+      // Update the geometry to reflect vertex changes
+      ocean.geometry.attributes.position.needsUpdate = true;
+    }
   
     // Load the raft model
     const loader = new GLTFLoader();
@@ -92,26 +121,30 @@ document.addEventListener('DOMContentLoaded', () => {
         let direction = new THREE.Vector3();
   
         // Calculate direction based on keys
-        if (keys.w) direction.z -= 1;
-        if (keys.s) direction.z += 1;
-        if (keys.a) direction.x -= 1;
-        if (keys.d) direction.x += 1;
+        if (keys.w) direction.z += 1;
+        if (keys.s) direction.z -= 1;
+        if (keys.a) direction.x += 1;
+        if (keys.d) direction.x -= 1;
   
         // Normalize direction to avoid diagonal speed boost
         if (direction.length() > 0) {
           direction.normalize();
-  
+        
           // Update raft position
           raft.position.addScaledVector(direction, 0.1);
-  
-          // Update raft rotation to face the movement direction
-          const angle = Math.atan2(direction.x, direction.z);
-          raft.rotation.y = angle;
+        
+          // Calculate the target rotation
+          const targetAngle = Math.atan2(direction.x, direction.z);
+          const currentAngle = raft.rotation.y;
+        
+          // Smoothly interpolate to the target angle
+          raft.rotation.y = THREE.MathUtils.lerp(currentAngle, targetAngle, 0.1); // Adjust 0.1 for smoothness
         }
+        
       }
     }
   
-    const cameraOffset = { x: 0, y: 5, z: 10 }; // Adjust this offset for third-person view
+    const cameraOffset = { x: 0, y: 8, z: 15 }; // Adjust this offset for third-person view
   
     function animate() {
       requestAnimationFrame(animate);
@@ -121,6 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
       // Smoothly update camera position
       updateCameraPositionSmoothly(camera, raft, cameraOffset);
+
+        // Animate waves
+      animateWaves();
   
       // Render the scene
       renderer.render(scene, camera);
